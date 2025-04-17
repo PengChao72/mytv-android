@@ -10,6 +10,8 @@ import java.io.File
 import java.net.URL
 import java.util.concurrent.Executors
 import android.os.Build
+import android.widget.Toast;
+
 
 class X5CorePreLoadService : JobIntentService() {
     private val log = Logger.create("X5CorePreLoadService")
@@ -40,20 +42,26 @@ class X5CorePreLoadService : JobIntentService() {
         if (downloadUrl != null) {
             Executors.newSingleThreadExecutor().execute {
                 try {
-                    // 下载 APK 文件
-                    val url = URL(downloadUrl)
-                    val connection = url.openConnection()
-                    connection.connect()
-                    val inputStream = connection.getInputStream()
                     val file = File(apkPath)
-                    file.outputStream().use { outputStream ->
-                        inputStream.copyTo(outputStream)
+                    if (!file.exists() || file.length() <=  0) {
+                        // 下载 APK 文件
+                        log.i("开始下载 Core APK: $downloadUrl")
+                        Toast.makeText(this@X5CorePreLoadService, "正在远程获取X5Core...", Toast.LENGTH_SHORT).show()
+                        val url = URL(downloadUrl)
+                        val connection = url.openConnection()
+                        connection.connect()
+                        val inputStream = connection.getInputStream()
+                        file.outputStream().use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
                     }
                     // 加载本地 TBS 内核
                     QbSdk.installLocalTbsCore(applicationContext, code, apkPath)
                     log.i("Core APK 下载并加载成功: $apkPath")
                 } catch (e: Exception) {
                     log.e("Core APK 下载或加载失败: ${e.message}")
+                    Toast.makeText(this@X5CorePreLoadService, "获取X5Core失败，请使用系统WebView内核", Toast.LENGTH_SHORT).show()
+
                 }
             }
         } else {
